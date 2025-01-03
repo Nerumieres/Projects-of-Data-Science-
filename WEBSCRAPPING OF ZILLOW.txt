@@ -1,0 +1,83 @@
+import requests
+from bs4 import BeautifulSoup
+import pandas as pd
+import time
+
+# Header with User-Agent to avoid blocks
+headers = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0'
+}
+
+# Base URL with pagination
+url_base = 'https://www.zillow.com/ca/?searchQueryState=%7B%22isMapVisible%22%3Afalse%2C%22mapBounds%22%3A%7B%22north%22%3A45.20984769570354%2C%22south%22%3A28.72520222146765%2C%22east%22%3A-105.94727400000001%2C%22west%22%3A-132.666024%7D%2C%22filterState%22%3A%7B%22sort%22%3A%7B%22value%22%3A%22globalrelevanceex%22%7D%2C%22price%22%3A%7B%22min%22%3A100000%2C%22max%22%3A500000%7D%2C%22mp%22%3A%7B%22min%22%3A517%2C%22max%22%3A2587%7D%7D%2C%22isListVisible%22%3Atrue%2C%22mapZoom%22%3A5%2C%22regionSelection%22%3A%5B%7B%22regionId%22%3A9%2C%22regionType%22%3A2%7D%5D%2C%22usersSearchTerm%22%3A%22CA%22%2C%22schoolId%22%3Anull%2C%22pagination%22%3A%7B%7D%7D'
+
+# Lists to store product data
+beds = []
+prices = []
+sqfts = []
+baths = []
+
+# Initial page
+page = 1
+
+# Loop to navigate through pages
+while True:
+    # Build the URL for the current page
+    url = f'{url_base}?page={page}'
+    
+    # Send GET request to the results page
+    response = requests.get(url, headers=headers)
+    soup = BeautifulSoup(response.text, 'html.parser')
+
+    # Find all product links on the page
+    products = soup.find_all('a', class_='property-card-link')
+    if not products:  # If no products are found, it means the last page was reached
+        break
+
+    # Get the product URLs on the current page
+    product_urls = [product['href'] for product in products if product.get('href')]
+
+    # Loop through each product URL to extract detailed information
+    for product_url in product_urls:
+        try:
+            product_response = requests.get(product_url, headers=headers)
+            product_response.raise_for_status()  # Check if the request was successful
+            product_soup = BeautifulSoup(product_response.text, 'html.parser')
+            
+            # Extract product attributes
+            bed_data = product_soup.find('span', class_='Text-c11n-8-106-0__sc-aiai24-0 styles__StyledValueText-fshdp-8-106-0__sc-12ivusx-1 ivqQFt bfIPme --medium')
+            price_data = product_soup.find('span', class_='Text-c11n-8-106-0__sc-aiai24-0 sc-dTjBdT zgCgh iHLfFI')
+            sqft_data = product_soup.find('span', class_='Text-c11n-8-106-0__sc-aiai24-0 styles__StyledValueText-fshdp-8-106-0__sc-12ivusx-1 ivqQFt bfIPme --medium')
+            bath_data = product_soup.find('span', class_='Text-c11n-8-106-0__sc-aiai24-0 styles__StyledValueText-fshdp-8-106-0__sc-12ivusx-1 ivqQFt bfIPme --medium')
+            
+            # Add data to the lists, checking if information exists
+            beds.append(bed_data.text.strip() if bed_data else 'N/A')
+            prices.append(price_data['content'].strip() if price_data else 'N/A')
+            sqfts.append(sqft_data.text.strip() if sqft_data else 'N/A')
+            baths.append(bath_data.text.strip().split('|')[-1].replace('sold', '').strip() if bath_data else 'N/A')
+
+            # Delay between requests to avoid blocking
+            time.sleep(5)
+        
+        except requests.exceptions.RequestException as e:
+            print(f"Error accessing product {product_url}: {e}")
+            continue
+    
+    # Increment page number to continue to the next one
+    page += 1
+
+# Create a DataFrame with the collected data
+df = pd.DataFrame({
+    'Beds': beds,
+    'Prices': prices,
+    'Sqft': sqfts,
+    'Baths': baths,
+})
+
+# Display the DataFrame
+print(df)
+
+# Save data to a CSV file
+df.to_csv('product_details_with_pagination.csv', index=False, encoding='utf-8')
+
+print("Data saved in the file 'product_details_with_pagination.csv'.")
