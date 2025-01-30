@@ -1,140 +1,80 @@
 import random
 import time
+import pandas as pd
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from bs4 import BeautifulSoup
-import pandas as pd
-from selenium.webdriver.common.proxy import Proxy, ProxyType
 
 # WebDriver Configuration
 chrome_options = Options()
-chrome_options.add_argument("--headless")  # Run without opening the browser
+chrome_options.add_argument("--headless")  # Runs without opening the browser
+chrome_options.add_argument("--disable-gpu")
+chrome_options.add_argument("--no-sandbox")
 
-# Proxy list for rotation
-proxies = [
-    'http://10.10.1.10:8080',
-    'http://10.10.1.11:8080',
-    'http://10.10.1.12:8080',  # Add your proxies here
-]
-
-# Function to configure proxy
-def configure_proxy(driver, proxy):
-    webdriver.DesiredCapabilities.CHROME['proxy'] = {
-        "httpProxy": proxy,
-        "ftpProxy": proxy,
-        "sslProxy": proxy,
-        "proxyType": ProxyType.MANUAL
-    }
-    driver.quit()
-    service = Service("C:\\Users\\mello\\Desktop\\Meu Driver Edge\\msedgedriver.exe")
-    driver = webdriver.Edge(service=service, options=chrome_options)
-
-# Replace with the path to your ChromeDriver
-service = Service("C:\\Users\\mello\\Desktop\\Meu Driver Edge\\msedgedriver.exe")
-driver = webdriver.Edge(service=service, options=chrome_options)
-
-# User-Agent list for rotation (avoids bot detection)
+# User-Agent Simulation
 user_agents = [
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-    'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:31.0) Gecko/20100101 Firefox/31.0',
-    'Mozilla/5.0 (Windows NT 6.3; Trident/7.0; AS; rv:11.0) like Gecko',
-    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.113 Safari/537.36'
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.113 Safari/537.36"
 ]
+chrome_options.add_argument(f"user-agent={random.choice(user_agents)}")
 
-# Header to simulate a real browser
-headers = {
-    'User-Agent': random.choice(user_agents)  # Randomly chooses a User-Agent
-}
+# Initialize the fake driver
+service = Service("C:\\Path\\To\\Your\\Driver\\chromedriver.exe")
+driver = webdriver.Chrome(service=service, options=chrome_options)
 
-# Base URL of Amazon search page
-base_url = "https://www.amazon.com.br/s?rh=n%3A16339926011%2Cn%3A16364751011&dc&qid=1735759114&rnid=16339926011&ref=sr_nr_n_3"
+# Fake URL
+base_url = "https://www.amazon.com.br/fake-category"
 
-# Function to navigate pages with Selenium and extract product links
 def navigate_and_extract_links():
-    driver.get(base_url)
-    time.sleep(10)  # Wait for the page to load
-
-    product_urls = []
-
-    while True:
-        soup = BeautifulSoup(driver.page_source, 'html.parser')
-
-        # Find product links on the page
-        products = soup.find_all('a', class_="a-link-normal octopus-pc-item-link")
-        if products:
-            product_urls += [product.find('a')['href'] for product in products if product.find('a')]
-
-            # Try to find the button to go to the next page
-            try:
-                next_button = driver.find_element(By.CSS_SELECTOR, '.s-pagination-item.s-pagination-button')
-                if "s-pagination-disabled" in next_button.get_attribute("class"):
-                    break  # If the next page button is disabled, end the collection
-                next_button.click()
-                time.sleep(3)  # Wait for the new page to load
-            except Exception as e:
-                print(f"Error clicking the next page button: {e}")
-                break  # If the next page button is not found, exit the loop
-        else:
-            print("No products found or page structure has changed.")
-            break  # If no products are found on the page, stop the loop
-
+    """Simulates the extraction of product URLs."""
+    print("Accessing fake product page...")
+    time.sleep(2)
+    
+    # Simulated URL extraction
+    product_urls = [
+        "https://www.amazon.com.br/fake-product-1",
+        "https://www.amazon.com.br/fake-product-2",
+        "https://www.amazon.com.br/fake-product-3"
+    ]
     return product_urls
 
-# Function to extract product details
 def extract_product_details(product_url):
-    driver.get(product_url)
-    time.sleep(10)  # Wait for the page to load
-
-    soup = BeautifulSoup(driver.page_source, 'html.parser')
-
-    # Extract product information
-    name = soup.find('span', {'id': 'productTitle'})
-    price = soup.find('span', class_='a-price-symbol') and soup.find('span', class_='a-price-whole') and soup.find('span', class_='a-price-fraction')
-    if price:
-        price = price.text.strip() + price.text.strip()
-    else:
-        price = 'N/A'
+    """Simulates extracting product details."""
+    print(f"Extracting data from fake product: {product_url}")
+    time.sleep(2)
     
-    review = soup.find('span', class_='a-size-base a-color-base').text.strip() if soup.find('span', class_='a-size-base a-color-base') else 'N/A'
-    quantity_sold = soup.find('span', class_='a-text-bold').text.strip() if soup.find('span', class_='a-text-bold') else 'N/A'
-
-    return {
-        'Name': name.text.strip() if name else 'N/A',
-        'Price': price.strip() if price else 'N/A',
-        'Review': review.strip() if review else 'N/A',
-        'Quantity Sold': quantity_sold.strip() if quantity_sold else 'N/A'
+    # Simulated data
+    product_data = {
+        'Name': f"Fake Product {random.randint(1, 100)}",
+        'Price': f"$ {random.randint(10, 500)}.99",
+        'Review': f"{random.randint(1, 5)} stars",
+        'Quantity Sold': f"{random.randint(100, 5000)} units"
     }
+    return product_data
 
-# Function to collect data from multiple pages and save to CSV
 def collect_data():
+    """Collects fake data and saves it to a CSV."""
     product_urls = navigate_and_extract_links()
+    
+    product_data = []
+    for url in product_urls:
+        product = extract_product_details(url)
+        product_data.append(product)
+        time.sleep(1)
+    
+    # Creating fake DataFrame
+    df = pd.DataFrame(product_data)
+    print("Collected data:")
+    print(df)
+    
+    # Saving fake CSV
+    df.to_csv('amazon_products_fake.csv', index=False, encoding='utf-8')
+    print("Data saved in 'amazon_products_fake.csv'.")
 
-    if product_urls:
-        product_data = []
-        for url in product_urls:
-            product = extract_product_details(url)
-            if product:
-                product_data.append(product)
-
-            # Wait between requests to avoid blocking
-            time.sleep(random.randint(3, 10))
-
-        # Create a DataFrame with the collected data
-        df = pd.DataFrame(product_data)
-
-        # Display the data
-        print(df)
-
-        # Save the data to a CSV file
-        df.to_csv('amazon_products_data.csv', index=False, encoding='utf-8')
-        print("Data saved to 'amazon_products_data.csv'.")
-    else:
-        print("No data was collected.")
-
-# Start the data collection process
+# Execute fake data collection
 collect_data()
 
-# Close the driver after use
+# Close the fake driver
 driver.quit()
